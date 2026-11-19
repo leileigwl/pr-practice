@@ -39,4 +39,9 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
+// 被测试 require 时不自动启动，直接运行时才监听端口
+if (require.main === module) {
+  server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
+}
+
+module.exports = server;
