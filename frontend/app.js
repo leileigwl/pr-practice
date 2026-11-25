@@ -4,7 +4,8 @@ const list = document.getElementById('list');
 async function load() {
   const res = await fetch('/api/todos');
   const todos = await res.json();
-  list.innerHTML = todos.map((t) => `<li><input type="checkbox" ${t.done ? "checked" : ""}> ${t.title}</li>`).join('');
+  list.innerHTML = todos.map((t) => `<li><input type="checkbox" ${t.done ? "checked" : ""}> 📌${t.title}</li>`).join('');
+
 }
 
 document.getElementById('add').addEventListener('submit', async (e) => {
