@@ -1,0 +1,48 @@
+# main 有新合并时，扫描所有开着的 PR：
+# 有冲突 → 打上「有冲突」标签并 @作者（作者会收到通知）
+# 冲突解决了 → 自动去掉标签
+name: Conflict alert
+
+on:
+  push:
+    branches: [main]
+  pull_request_target:
+    types: [synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const LABEL = '有冲突';
+            const { owner, repo } = context.repo;
+            try {
+              await github.rest.issues.createLabel({ owner, repo, name: LABEL, color: 'd73a4a' });
+            } catch (e) { /* 已存在 */ }
+
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open' });
+            for (const p of prs) {
+              // GitHub 需要几秒计算 mergeable，最多等 5 次
+              let pr;
+              for (let i = 0; i < 5; i++) {
+                pr = (await github.rest.pulls.get({ owner, repo, pull_number: p.number })).data;
+                if (pr.mergeable !== null) break;
+                await new Promise((r) => setTimeout(r, 5000));
+              }
+              const has = pr.labels.some((l) => l.name === LABEL);
+              if (pr.mergeable === false && !has) {
+                await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels: [LABEL] });
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: pr.number,
+                  body: `@${pr.user.login} main 刚有新合并，这个 PR 现在和 main 有冲突。请在本地执行 \`git fetch upstream && git merge upstream/main\`，解决冲突后 push 到原分支即可。`,
+                });
+              } else if (pr.mergeable === true && has) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number: pr.number, name: LABEL });
+              }
+            }

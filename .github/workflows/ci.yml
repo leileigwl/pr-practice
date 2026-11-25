@@ -1,0 +1,22 @@
+# 每个 PR 和每次推送 main 都自动跑测试，失败 PR 上显示红叉
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 语法检查
+        run: node --check backend/server.js && node --check frontend/app.js
+      - name: 后端测试
+        working-directory: backend
+        run: npm test
